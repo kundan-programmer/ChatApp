@@ -1,66 +1,38 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { useAuth } from "./Authprovider.jsx";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
+import { useAuth } from "./Authprovider";
 
-const socketContext = createContext();
+const SocketContext = createContext();
 
-// hook
-export const useSocketContext = () => {
-  return useContext(socketContext);
-};
+export const useSocketContext = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const [onlineUsers, setOnlineUsers] = useState([]);
-
-  // 🔹 typing user
-  const [typingUser, setTypingUser] = useState(null);
-
+  const [onlineUsers, setOnlineUsers] = useState([]); // 👈 ADD
   const [authUser] = useAuth();
 
   useEffect(() => {
-    if (authUser) {
-      const socket = io("import.meta.env.VITE_API_URL", {
+    if (authUser?.user?._id) {
+      const newSocket = io("http://localhost:3000", {
         withCredentials: true,
-        transports: ["websocket"],
-        query: {
-          userId: authUser.user._id,
-        },
+        query: { userId: authUser.user._id },
       });
 
-      setSocket(socket);
+      setSocket(newSocket);
 
-      socket.on("getOnlineUsers", (users) => {
-        setOnlineUsers(users);
+      newSocket.on("getOnlineUsers", (users) => {
+        setOnlineUsers(users || []); // 👈 SAFE
       });
 
-      // 🔹 LISTEN TYPING
-      socket.on("userTyping", ({ from }) => {
-        setTypingUser(from);
-      });
-
-      socket.on("userStopTyping", () => {
-        setTypingUser(null);
-      });
-
-      // 🧹 CLEANUP
       return () => {
-        socket.off("getOnlineUsers");
-        socket.off("userTyping");
-        socket.off("userStopTyping");
-        socket.close();
+        newSocket.disconnect();
       };
-    } else {
-      if (socket) {
-        socket.close();
-        setSocket(null);
-      }
-    }
+    };
   }, [authUser]);
 
   return (
-    <socketContext.Provider value={{ socket, onlineUsers, typingUser }}>
+    <SocketContext.Provider value={{ socket, onlineUsers }}>
       {children}
-    </socketContext.Provider>
+    </SocketContext.Provider>
   );
 };

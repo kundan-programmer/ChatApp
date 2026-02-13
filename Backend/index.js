@@ -12,10 +12,7 @@ import { app, server } from "./SocketIO/server.js";
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-  origin: [
-    "http://localhost:3001",
-      "https://chat-app-eight-beta-42.vercel.app" 
-  ],
+  origin: "http://localhost:3001",
     credentials: true
 }));
 const PORT = process.env.PORT || 3000;
